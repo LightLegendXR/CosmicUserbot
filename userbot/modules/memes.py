@@ -777,6 +777,16 @@ async def slap(replied_user, event):
 
     return caption
 
+@register(outgoing=True, pattern="^.sp(?: |$)(.*)")
+async def spoil(event):
+    args = event.pattern_match.group(1)
+    if not args:
+        get = await event.get_reply_message()
+        args = get.text
+    if not args:
+        await event.edit("`How can I make spoilers without text?`")
+        return
+    await event.edit(f"<spoiler> {args} </spoiler>",parse_mode='html')
 
 @register(outgoing=True, pattern="^-_-$", ignore_unsafe=True)
 async def emo(sigh):
@@ -1290,6 +1300,36 @@ async def fprom(event):
     time.sleep(3.0)
     await event.edit("`Promoted Successfully! Now gib party!`")
 
+@register(outgoing=True, pattern="^\.meme$")
+async def mem(event):
+    await event.edit("`Getting a meme from reddit...`")
+    subs = ['memes','ComedyCemetery','dankmemes']
+    sub = random.choice(subs)
+    try:
+        memejson = requests.get(f"https://meme-api.herokuapp.com/gimme/{sub}").json()
+        img = memejson['url']
+        title = memejson['title']
+        lin = memejson['postLink']
+    except:
+        await event.edit("`no meme today, sad...`")
+        return
+    await event.client.send_file(
+        event.chat_id,
+        img,
+        caption=(f"{title}\n[Post Link]({lin})")
+        )
+    await event.delete()
+
+@register(outgoing=True, pattern="^\.joke$")
+async def jok(event):
+    channel = await event.client.get_entity("t.me/r_jokes")
+    async for message in event.client.iter_messages(channel,limit=1):
+        latest_message_id = message.id
+    joke_id = randint(1,latest_message_id)
+    async for message in event.client.iter_messages(channel,limit=1,ids=joke_id):
+        joke = message.text
+    await event.edit(joke)
+
 @register(outgoing=True, pattern=r"^.f (.*)")
 async def payf(event):
     paytext = event.pattern_match.group(1)
@@ -1321,11 +1361,9 @@ async def let_me_google_that_for_you(lmgtfy_q):
         query = query.message
     query_encoded = query.replace(" ", "+")
     lfy_url = f"http://lmgtfy.com/?s=g&iie=1&q={query_encoded}"
-    payload = {"format": "json", "url": lfy_url}
-    r = requests.get("http://is.gd/create.php", params=payload)
     await lmgtfy_q.edit(
         f"Here you are, help yourself.\
-    \n[{query}]({r.json()['shorturl']})"
+    \n[{query}]({lfy_url})"
     )
 
 
@@ -1815,6 +1853,12 @@ CMD_HELP.update(
 \nUsage: Let me Google that for you real quick !!\
 \n\n.decide [Alternates: (.yes, .no, .maybe)]\
 \nUsage: Make a quick decision.\
+\n\n.meme\
+\nUsage: Get a random meme from reddit!\
+\n\n.joke\
+\nUsage: Get a random joke from @r_jokes!\
+\n\n.sp <text>\
+\nUsage: Make spoiler text\
 \n\n.scam <action> <time>\
 \n[Available Actions: (typing, contact, game, location, voice, round, video, photo, document, cancel)]\
 \nUsage: Create fake chat actions, for fun. (Default action: typing)\
